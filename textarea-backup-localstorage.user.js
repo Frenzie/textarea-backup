@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name		Textarea Backup Localstorage
 // @author 		Frans de Jonge (Frenzie)
-// @version		1.02
+// @version		1.03
 // @namespace		http://extendopera.org/userjs/content/textarea-backup-localstorage
 // @description		Retains text entered into textareas.
 // @include		*
@@ -10,6 +10,7 @@
 // ==/UserScript==
 // This script is based on http://userscripts.org/scripts/show/42879 which is based on http://userscripts.org/scripts/show/7671
 // Changelog
+// 1.03 December 27, 2012. Listen on the modern "input" event instead of "keypress". Changed keep_after_submission a little  due to problems with LibraryThing. Finally implemented the fix suggested by movax.
 // 1.02 March 10, 2010. Faux-patched a variable leak bug. Still investigating the real cause.
 // 1.01 March 10, 2010. Fixed bug where localStorage values not set by this script were often accidentally deleted.
 // 1.0 March 7, 2010. Initial release.
@@ -29,7 +30,7 @@ var timed_backup = /*@Timed backup@bool@*/false/*@*/;
 var backup_interval = /*@_Backup interval (ms)@int@*/10000/*@*/;
 // keep backup even successfully submitted
 // make sure expiration is enabled 
-var keep_after_submission = /*@Keep backup after submission@bool@*/true/*@*/;
+var keep_after_submission = /*@Keep backup after submission (causes trouble on LibraryThing if false)@bool@*/true/*@*/;
 // set true to display a confirmation window of restoration
 // when the target textarea of is not empty
 // set false to skip restoration if not empty
@@ -111,7 +112,7 @@ SaveTextArea.prototype = {
 		var self = this;
 		// Save buffer every keystrokes.
 		if (keypress_backup)
-			this.ta.addEventListener('keypress', function(e)
+			this.ta.addEventListener('input', function(e)
 			{
 				self.commit(self.ta.value);
 			}, true);
@@ -127,24 +128,25 @@ SaveTextArea.prototype = {
 		if (timed_backup)
 			this._stay_tuned();
 
-		// Should be a method really but there'd be more code to get it to work as
-		// expected with event handlers so I won't bother.
-		var onsubmit = function(e) {
-			if (!keep_after_submission)
+		if (!keep_after_submission) {
+			// Should be a method really but there'd be more code to get it to work as
+			// expected with event handlers so I won't bother.
+			var onsubmit = function(e) {
 				deleteValue(self.key());
-		};
+			};
 
-		var theform = this.ta.form;
-		// Delete buffer when the form has been submitted.
-		theform.addEventListener('submit', onsubmit, true);
+			var theform = this.ta.form;
+			// Delete buffer when the form has been submitted.
+			theform.addEventListener('submit', onsubmit, true);
 
-		// Keep a copy of the submit method.
-		theform.the_actual_submit_method = theform.submit;
-		// Catch direct calls to submit() which doesn't trigger the submit event.
-		theform.submit = function() {
-			onsubmit();
-			self.ta.form.the_actual_submit_method();
-		};
+			// Keep a copy of the submit method.
+			theform.the_actual_submit_method = theform.submit;
+			// Catch direct calls to submit() which doesn't trigger the submit event.
+			theform.submit = function() {
+				onsubmit();
+				theform.the_actual_submit_method();
+			};
+		}
 	},
 	_stay_tuned: function() {
 		var self = this;
@@ -183,9 +185,9 @@ SaveTextArea.prototype = {
 				overflow: hidden;\
 				top: '+offsetTop+'px;\
 				right: '+offsetRight+'px;\
-				-o-transition-property: background, width, height, color;\
-				-o-transition-duration: .5s, .5s, .5s, .5s;\
-				-o-transition-delay: 0s, 0s, 0s, .5s;\
+				transition-property: background, width, height, color;\
+				transition-duration: .5s, .5s, .5s, .5s;\
+				transition-delay: 0s, 0s, 0s, .5s;\
 			}\
 			#textarea_backup_menu ul {\
 				margin: 0;\
@@ -193,8 +195,8 @@ SaveTextArea.prototype = {
 				list-style: none;\
 				height: 0;\
 				overflow: hidden;\
-				-o-transition-property: height;\
-				-o-transition-duration: .5s;\
+				transition-property: height;\
+				transition-duration: .5s;\
 			}\
 			#textarea_backup_menu li {\
 				margin: 0;\
@@ -206,9 +208,9 @@ SaveTextArea.prototype = {
 				padding: 5px;\
 				border-top: 1px solid #000;\
 				color: hsla(0, 0%, 0%, .1);\
-				-o-transition-property: color;\
-				-o-transition-duration: .5s;\
-				-o-transition-delay: .5s;\
+				transition-property: color;\
+				transition-duration: .5s;\
+				transition-delay: .5s;\
 			}\
 				#textarea_backup_menu:hover a, #textarea_backup_menu:focus a {\
 					height: auto;\
@@ -262,8 +264,8 @@ SaveTextArea.prototype = {
 		);
 		
 		for (var i in menuFunctions) {
-			// Checking if there are no outside "menuFunctions" leaking into the script. They can still leak (I don't understand why), but only if they are constructed the exact same way.
-			if (typeof menuFunctions[i] == 'object' && typeof menuFunctions[i][0] == 'string' && typeof menuFunctions[i][1] == 'function') {
+			// Checking if there are no outside "menuFunctions" leaking into the script. Thanks to movax for the fix.
+			if ( menuFunctions.hasOwnProperty(i) ) {
 				menuList.appendChild(li = document.createElement('li'));
 				li.appendChild(a = document.createElement('a'));
 				with (a) {
