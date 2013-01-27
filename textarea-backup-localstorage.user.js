@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name		Textarea Backup Localstorage
 // @author 		Frans de Jonge (Frenzie)
-// @version		1.03
+// @version		1.04
 // @namespace		http://extendopera.org/userjs/content/textarea-backup-localstorage
 // @description		Retains text entered into textareas.
 // @include		*
@@ -10,6 +10,7 @@
 // ==/UserScript==
 // This script is based on http://userscripts.org/scripts/show/42879 which is based on http://userscripts.org/scripts/show/7671
 // Changelog
+// 1.04
 // 1.03 December 27, 2012. Listen on the modern "input" event instead of "keypress". Changed keep_after_submission a little  due to problems with LibraryThing. Finally implemented the fix suggested by movax.
 // 1.02 March 10, 2010. Faux-patched a variable leak bug. Still investigating the real cause.
 // 1.01 March 10, 2010. Fixed bug where localStorage values not set by this script were often accidentally deleted.
