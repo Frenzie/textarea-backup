@@ -229,7 +229,12 @@ SaveTextArea.prototype = {
 				height: auto;\
 			}\
 		';
-		document.body.previousSibling.appendChild(style);
+		if (typeof document.head === 'object') {
+			document.head.appendChild(style); // only works in Opera 11 and up
+		}
+		else {
+			document.querySelector('head').appendChild(style); // retain 10.50 compatibility for now
+		}
 		if (em) {
 			taMenu.style.opacity = 1;
 			taMenu.style.backgroundColor = em_color;
