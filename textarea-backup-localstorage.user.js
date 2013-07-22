@@ -1,6 +1,6 @@
 ﻿// ==UserScript==
 // @name		Textarea Backup Localstorage
-// @author 		Frans de Jonge (Frenzie)
+// @author		Frans de Jonge (Frenzie)
 // @version		1.04
 // @namespace		http://extendopera.org/userjs/content/textarea-backup-localstorage
 // @description		Retains text entered into textareas.
@@ -10,13 +10,18 @@
 // ==/UserScript==
 // This script is based on http://userscripts.org/scripts/show/42879 which is based on http://userscripts.org/scripts/show/7671
 // Changelog
-// 1.04
+// 1.04 A whole bunch of minor changes due to pulling this '09 code through JSHint.
 // 1.03 December 27, 2012. Listen on the modern "input" event instead of "keypress". Changed keep_after_submission a little  due to problems with LibraryThing. Finally implemented the fix suggested by movax.
 // 1.02 March 10, 2010. Faux-patched a variable leak bug. Still investigating the real cause.
 // 1.01 March 10, 2010. Fixed bug where localStorage values not set by this script were often accidentally deleted.
 // 1.0 March 7, 2010. Initial release.
 
+// Tell JSHint that we don't need warnings about multiline strings. It's not like e.g. localStorage even works on older browsers.
+// Don't need warnings about ommitting {}. It's just faster sometimes.
+/*jshint multistr: true, curly: false */
+
 (function () {
+'use strict';
 /* Preferences */
 
 // display menu
@@ -49,7 +54,7 @@ var expire_after_minutes = /*@Expire after minutes@int@*/30/*@*/;
 /* Code */
 // GM compatibility
 var myLocalStorage;
-if (typeof unsafeWindow != 'undefined') {
+if (typeof unsafeWindow !== 'undefined') {
 	myLocalStorage = unsafeWindow.localStorage;
 }
 else {
@@ -59,12 +64,16 @@ else {
 // expiry time for a backup, in millisecond
 var expiry_timespan = (((expire_after_days * 24) + expire_after_hours) * 60 + expire_after_minutes) * 60000;
 
+// It's better to define this separately, I guess.
+var i;
+
 function getAbsolutePosition(element,direction) {
 	var ele = element, dir = direction, pos, tempEle;
-	(dir=='x') ? pos = ele.offsetLeft : pos = ele.offsetTop;
+	pos = (dir==='x') ? ele.offsetLeft : ele.offsetTop;
+	
 	tempEle = ele.offsetParent;
-	while(tempEle != null) {
-		pos += (dir=='x') ? tempEle.offsetLeft : tempEle.offsetTop;
+	while(tempEle !== null) {
+		pos += (dir==='x') ? tempEle.offsetLeft : tempEle.offsetTop;
 		tempEle = tempEle.offsetParent;
 	}
 	return pos;
@@ -72,7 +81,7 @@ function getAbsolutePosition(element,direction) {
 
 function getValue(key) {
 	var value = myLocalStorage[key];
-	return ( value && (value != 'undefined') ) ? value : '';
+	return ( value && (value !== 'undefined') ) ? value : '';
 }
 function setValue(key, value) {
 	myLocalStorage[key] = value;
@@ -84,7 +93,7 @@ function deleteValue(key) {
 // moved this function out of SaveTextArea
 // for expiration check routine use
 function is_significant(str) {
-	return typeof str == 'string' &&
+	return typeof str === 'string' &&
 		str.replace(/\s+/g, '').length > 0;
 }
 function append_time_stamp(str) {
@@ -92,14 +101,14 @@ function append_time_stamp(str) {
 }
 function remove_time_stamp(str) {
 	var time_pos = str.search(/@\d+$/);
-	return (time_pos != -1) ? str.substring(0, time_pos) : str;
+	return (time_pos !== -1) ? str.substring(0, time_pos) : str;
 }
 function get_time_stamp(str) {
 	var time_pos = str.search(/@\d+$/);
 	return str.substring(time_pos + 1);
 }
 function SaveTextArea(txta) {
-	this.ta = (typeof txta == 'string' ?
+	this.ta = (typeof txta === 'string' ?
 		document.getElementById(txta) : txta);
 
 	this.initial_txt = this.ta.textContent;
@@ -113,15 +122,13 @@ SaveTextArea.prototype = {
 		var self = this;
 		// Save buffer every keystrokes.
 		if (keypress_backup)
-			this.ta.addEventListener('input', function(e)
-			{
+			this.ta.addEventListener('input', function() {
 				self.commit(self.ta.value);
 			}, true);
 
 		// Save buffer when the textarea loses focus.
 		if (blur_backup)
-			this.ta.addEventListener('blur', function(e)
-			{
+			this.ta.addEventListener('blur', function() {
 				self.commit();
 			}, true);
 
@@ -132,7 +139,7 @@ SaveTextArea.prototype = {
 		if (!keep_after_submission) {
 			// Should be a method really but there'd be more code to get it to work as
 			// expected with event handlers so I won't bother.
-			var onsubmit = function(e) {
+			var onsubmit = function() {
 				deleteValue(self.key());
 			};
 
@@ -157,7 +164,7 @@ SaveTextArea.prototype = {
 		}, backup_interval);
 	},
 	menu: function(emphasize) {
-		var em = emphasize, self = this, taMenu = document.createElement('div'), opacity = .2;
+		var em = emphasize, self = this, taMenu = document.createElement('div'), menuList = document.createElement('ul'), li = document.createElement('li'), a, opacity = '.2';
 		
 		//opera.postError(this.ta.style.borderTopWidth);
 		//var offsetTop = this.ta.style.borderTopWidth + this.ta.style.marginTop + getAbsolutePosition(this.ta, 'y');
@@ -178,7 +185,7 @@ SaveTextArea.prototype = {
 				color: hsla(0, 0%, 0%, 0);\
 				font-size: 12px;\
 				font-family: "Deja Vu Sans", Verdana;\
-				opacity: .2;\
+				opacity: '+opacity+';\
 				position: absolute;\
 				z-index: 1000;\
 				width: 12px;\
@@ -244,14 +251,14 @@ SaveTextArea.prototype = {
 		taMenu.id = 'textarea_backup_menu';
 		//taMenu.textContent = 'Textarea Backup Actions';
 		
-		taMenu.appendChild(menuList = document.createElement('ul'));
+		taMenu.appendChild(menuList);
 		
 		// Define all the actions that should go in the menu
-		var menuFunctions = new Array();
-		menuFunctions[menuFunctions.length] = new Array(
+		var menuFunctions = [];
+		menuFunctions[menuFunctions.length] = [
 			'Restore previous backup for ' + this.ref(),
-			function() { self.ta.value = self.previous_backup }
-		);
+			function() { self.ta.value = self.previous_backup; }
+		];
 		menuFunctions[menuFunctions.length] = new Array(
 			'Delete previous backup for ' + this.ref(),
 			function() {
@@ -262,7 +269,7 @@ SaveTextArea.prototype = {
 			}
 		);
 		menuFunctions[menuFunctions.length] = new Array(
-			textContent = 'Clear ' + this.ref(),
+			'Clear ' + this.ref(),
 			function() {
 				if(confirm('Clear ' + self.ref() + '?'))
 					self.ta.value = '';
@@ -272,12 +279,12 @@ SaveTextArea.prototype = {
 		for (var i in menuFunctions) {
 			// Checking if there are no outside "menuFunctions" leaking into the script. Thanks to movax for the fix.
 			if ( menuFunctions.hasOwnProperty(i) ) {
-				menuList.appendChild(li = document.createElement('li'));
-				li.appendChild(a = document.createElement('a'));
-				with (a) {
-					textContent = menuFunctions[i][0];
-					addEventListener('click', menuFunctions[i][1], false);
-				}
+				a = document.createElement('a');
+				
+				menuList.appendChild(li);
+				li.appendChild(a);
+				a.textContent = menuFunctions[i][0];
+				a.addEventListener('click', menuFunctions[i][1], false);
 			}
 		}
 		
@@ -300,7 +307,7 @@ SaveTextArea.prototype = {
 		//opera.postError(buff == myLocalStorage['tab_temp']);
 		
 		// Check with user before overwriting existing content with backup.
-		if (buff != this.ta.textContent && is_significant(this.ta.textContent) && ask_overwrite) {
+		if (buff !== this.ta.textContent && is_significant(this.ta.textContent) && ask_overwrite) {
 			this._confirm_restore(buff);
 		}
 		else {
@@ -322,12 +329,9 @@ SaveTextArea.prototype = {
 		// Keep existing border so it's not lost when highlighting.
 		this.old_border = this.ta.style.border;
 
-		var msg = "[Textarea Backup] Existing text detected in '" + this.ref()
-						+ "', overwrite with this backup?\n\n";
-		msg += to_restore.length > 750
-				 ? to_restore.substring(0, 500) + "\n..."
-				 : to_restore;
-
+		var msg = "[Textarea Backup] Existing text detected in '" + this.ref() + "', overwrite with this backup?\n\n";
+		msg += to_restore.length > 750 ? to_restore.substring(0, 500) + "\n..." : to_restore;
+		
 		this.confirming = true;
 		this.ta.scrollIntoView();
 		
@@ -362,7 +366,7 @@ SaveTextArea.prototype = {
 		// Only save if:
 		// a) There's significant text in the <textarea>.
 		// b) The text that was there when the page loaded has changed.
-		if(is_significant(this.committed) && this.initial_txt != this.committed)
+		if(is_significant(this.committed) && this.initial_txt !== this.committed)
 			setValue( this.key(), this.committed );
 	},
 	// Rough'n'ready method which should be nicer.
@@ -381,7 +385,7 @@ SaveTextArea.prototype = {
 if (expiry_timespan > 0) {
 	// get all associated backups, and compare timestamp now and then
 	var curr_time = (new Date()).getTime();
-	for (var i=0;i<myLocalStorage.length;i++) {
+	for (i=0;i<myLocalStorage.length;i++) {
 		var curr_bak = getValue(myLocalStorage.key(i));
 		var bak_text = remove_time_stamp(curr_bak);
 		var bak_time = get_time_stamp(curr_bak);
@@ -393,10 +397,10 @@ if (expiry_timespan > 0) {
 }
 
 var textareas = document.getElementsByTagName('textarea');
-for(var i = 0; i < textareas.length; i++) {
+for (i = 0; i < textareas.length; i++) {
 	var ta = textareas[i];
 	// Occasionally a textarea might not have a form, weird.
-	if(ta['form'])
+	if(ta.form)
 		new SaveTextArea(ta);
 }
 
