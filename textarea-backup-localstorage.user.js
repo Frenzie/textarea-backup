@@ -175,7 +175,7 @@ SaveTextArea.prototype = {
 		var style = document.createElement('style');
 		style.setAttribute('type', 'text/css');
 		style.textContent = '\
-			#textarea_backup_menu {\
+			.textarea_backup_menu {\
 				border: 2px solid hsla(0, 0%, 0%, .8);\
 				border-width: 0 2px 2px 2px;\
 				border-radius: 0 0 5px 5px;\
@@ -197,7 +197,7 @@ SaveTextArea.prototype = {
 				transition-duration: .5s, .5s, .5s, .5s;\
 				transition-delay: 0s, 0s, 0s, .5s;\
 			}\
-			#textarea_backup_menu ul {\
+			.textarea_backup_menu ul {\
 				margin: 0;\
 				padding: 0;\
 				list-style: none;\
@@ -206,11 +206,11 @@ SaveTextArea.prototype = {
 				transition-property: height;\
 				transition-duration: .5s;\
 			}\
-			#textarea_backup_menu li {\
+			.textarea_backup_menu li {\
 				margin: 0;\
 				padding: 0;\
 			}\
-			#textarea_backup_menu a {\
+			.textarea_backup_menu a {\
 				display: block;\
 				width: 100%;\
 				padding: 5px;\
@@ -220,20 +220,20 @@ SaveTextArea.prototype = {
 				transition-duration: .5s;\
 				transition-delay: .5s;\
 			}\
-				#textarea_backup_menu:hover a, #textarea_backup_menu:focus a {\
+				.textarea_backup_menu:hover a, .textarea_backup_menu:focus a {\
 					height: auto;\
 					color: hsl(230, 70%, 10%);\
 				}\
-			#textarea_backup_menu li a:hover {\
+			.textarea_backup_menu li a:hover {\
 				background: hsla(100, 100%, 100%, .8);\
 			}\
-			#textarea_backup_menu:hover, #textarea_backup_menu:focus {\
+			.textarea_backup_menu:hover, .textarea_backup_menu:focus {\
 				opacity: 1;\
 				width: auto;\
 				height: auto;\
 				color: #000;\
 			}\
-			#textarea_backup_menu:hover ul, #textarea_backup_menu:focus ul {\
+			.textarea_backup_menu:hover ul, .textarea_backup_menu:focus ul {\
 				height: auto;\
 			}\
 		';
@@ -248,7 +248,7 @@ SaveTextArea.prototype = {
 			taMenu.style.backgroundColor = em_color;
 		}
 		
-		taMenu.id = 'textarea_backup_menu';
+		taMenu.className = 'textarea_backup_menu';
 		//taMenu.textContent = 'Textarea Backup Actions';
 		
 		taMenu.appendChild(menuList);
