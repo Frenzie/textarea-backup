@@ -111,7 +111,7 @@ function get_time_stamp(str) {
 var init = {
 	inserted: function(e) {
 		var potential_ta = e.target, self = init;
-		if (potential_ta.tagName.toLowerCase() === 'textarea') {
+		if (typeof potential_ta.tagName !== 'undefined' && potential_ta.tagName.toLowerCase() === 'textarea') {
 			// It's just one element, but we pass it as an array because of how init.real() works.
 			self.real([potential_ta]);
 		}
