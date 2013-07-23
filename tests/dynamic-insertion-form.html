@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<title>Dynamic insertion test with form</title>
+<style>
+html, body, form {height:100%}
+textarea {display:block; border: 1px solid black; width:70%; height:70%; margin:auto}
+</style>
+<form></form>
+<script>
+var textarea = document.createElement('textarea');
+document.forms[0].appendChild(textarea);
+</script>
