@@ -10,7 +10,7 @@
 // ==/UserScript==
 // This script is based on http://userscripts.org/scripts/show/42879 which is based on http://userscripts.org/scripts/show/7671
 // Changelog
-// 1.10 Added simple support for dynamically added textareas.
+// 1.10 July 23, 2013. Added support for dynamically added textareas.
 // 1.03 December 27, 2012. Listen on the modern "input" event instead of "keypress". Changed keep_after_submission a little  due to problems with LibraryThing. Finally implemented the fix suggested by movax.
 // 1.02 March 10, 2010. Faux-patched a variable leak bug. Still investigating the real cause.
 // 1.01 March 10, 2010. Fixed bug where localStorage values not set by this script were often accidentally deleted.
@@ -53,13 +53,10 @@ var expire_after_minutes = /*@Expire after minutes@int@*/30/*@*/;
 
 /* Code */
 // GM compatibility
-var myLocalStorage;
 if (typeof unsafeWindow !== 'undefined') {
-	myLocalStorage = unsafeWindow.localStorage;
+	window = unsafeWindow;
 }
-else {
-	myLocalStorage = localStorage;
-}
+var myLocalStorage = window.localStorage;
 
 // expiry time for a backup, in millisecond
 var expiry_timespan = (((expire_after_days * 24) + expire_after_hours) * 60 + expire_after_minutes) * 60000;
@@ -114,12 +111,17 @@ var init = {
 	inserted: function(e) {
 		var potential_ta = e.target, self = init;
 		
-		// If it's a node with children it'll have querySelectorAll on it.
+		self.filter(potential_ta);
+	},
+	filter: function(potential_ta) {
+		var self = this;
+		
+		// If it's a node with children, it'll have querySelectorAll on it.
 		if (typeof potential_ta.querySelectorAll !== 'undefined') {
 			var querySelectorResults = potential_ta.querySelectorAll(querySelector);
 			self.real(querySelectorResults);
 		}
-		// A single inserted node could just be text. But if it's an element and it h
+		// A single inserted node could just be text. But if it's actually an element and a textarea, push it through.
 		else if (typeof potential_ta.tagName !== 'undefined' && potential_ta.tagName.toLowerCase() === 'textarea') {
 			// It's just one element, but we pass it as an array because of how init.real() works.
 			self.real([potential_ta]);
@@ -425,8 +427,23 @@ if (expiry_timespan > 0) {
 	}
 }
 
-// Init on DOMNodeInserted
-document.addEventListener('DOMNodeInserted', init.inserted);
+var MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
+
+if (typeof MutationObserver !== 'undefined') {
+	var observer = new MutationObserver(function(mutations) {  
+		mutations.forEach(function(mutation) {
+			for (var i = 0; i < mutation.addedNodes.length; i++) {
+				init.filter(mutation.addedNodes[i]);
+			}
+		});
+	});
+	
+	observer.observe(document.body, { subtree: true, childList: true });
+}
+else {
+	// Init on DOMNodeInserted
+	document.addEventListener('DOMNodeInserted', init.inserted);
+}
 
 // Init on DOMContentLoaded (when .user.js is loaded automatically).
 var textareas = document.querySelectorAll(querySelector);
