@@ -6,6 +6,8 @@ textarea {display:block; border: 1px solid black; width:70%; height:70%; margin:
 </style>
 <form></form>
 <script>
-var textarea = document.createElement('textarea');
-document.forms[0].appendChild(textarea);
+window.addEventListener('load', function() {
+	var textarea = document.createElement('textarea');
+	document.forms[0].appendChild(textarea);
+}, false);
 </script>
