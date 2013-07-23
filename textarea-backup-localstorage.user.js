@@ -107,6 +107,21 @@ function get_time_stamp(str) {
 	var time_pos = str.search(/@\d+$/);
 	return str.substring(time_pos + 1);
 }
+
+function init(textareas) {
+	for (var i = 0; i < textareas.length; i++) {
+		var ta = textareas[i];
+		// Occasionally a textarea might not have a form, weird.
+		if(ta.form)
+			new SaveTextArea(ta);
+	}
+}
+function initInserted(e) {
+	var textareas = e.target.querySelectorAll('textarea');
+	if (textareas.length > 0) {
+		init(textareas);
+	}
+}
 function SaveTextArea(txta) {
 	this.ta = (typeof txta === 'string' ?
 		document.getElementById(txta) : txta);
@@ -396,12 +411,10 @@ if (expiry_timespan > 0) {
 	}
 }
 
-var textareas = document.getElementsByTagName('textarea');
-for (i = 0; i < textareas.length; i++) {
-	var ta = textareas[i];
-	// Occasionally a textarea might not have a form, weird.
-	if(ta.form)
-		new SaveTextArea(ta);
-}
+// Init on DOMNodeInserted
+document.addEventListener('DOMNodeInserted', initInserted);
 
+// Init on DOMContentLoaded (when .user.js is loaded automatically).
+var textareas = document.getElementsByTagName('textarea');
+init(textareas);
 })();
