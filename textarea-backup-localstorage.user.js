@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name		Textarea Backup Localstorage
 // @author		Frans de Jonge (Frenzie)
-// @version		1.04
+// @version		1.10
 // @namespace		http://extendopera.org/userjs/content/textarea-backup-localstorage
 // @description		Retains text entered into textareas.
 // @include		*
@@ -10,7 +10,7 @@
 // ==/UserScript==
 // This script is based on http://userscripts.org/scripts/show/42879 which is based on http://userscripts.org/scripts/show/7671
 // Changelog
-// 1.04 A whole bunch of minor changes due to pulling this '09 code through JSHint.
+// 1.10 Added simple support for dynamically added textareas.
 // 1.03 December 27, 2012. Listen on the modern "input" event instead of "keypress". Changed keep_after_submission a little  due to problems with LibraryThing. Finally implemented the fix suggested by movax.
 // 1.02 March 10, 2010. Faux-patched a variable leak bug. Still investigating the real cause.
 // 1.01 March 10, 2010. Fixed bug where localStorage values not set by this script were often accidentally deleted.
@@ -108,20 +108,25 @@ function get_time_stamp(str) {
 	return str.substring(time_pos + 1);
 }
 
-function init(textareas) {
-	for (var i = 0; i < textareas.length; i++) {
-		var ta = textareas[i];
-		// Occasionally a textarea might not have a form, weird.
-		if(ta.form)
-			new SaveTextArea(ta);
+var init = {
+	inserted: function(e) {
+		var potential_ta = e.target, self = init;
+		if (potential_ta.tagName.toLowerCase() === 'textarea') {
+			// It's just one element, but we pass it as an array because of how init.real() works.
+			self.real([potential_ta]);
+		}
+	},
+	real: function(textareas) {
+		for (var i = 0; i < textareas.length; i++) {
+			var ta = textareas[i];
+			// Occasionally a textarea might not have a form, weird.
+			if (ta.form) {
+				new SaveTextArea(ta);
+			}
+		}
 	}
-}
-function initInserted(e) {
-	var textareas = e.target.querySelectorAll('textarea');
-	if (textareas.length > 0) {
-		init(textareas);
-	}
-}
+};
+
 function SaveTextArea(txta) {
 	this.ta = (typeof txta === 'string' ?
 		document.getElementById(txta) : txta);
@@ -412,9 +417,9 @@ if (expiry_timespan > 0) {
 }
 
 // Init on DOMNodeInserted
-document.addEventListener('DOMNodeInserted', initInserted);
+document.addEventListener('DOMNodeInserted', init.inserted);
 
 // Init on DOMContentLoaded (when .user.js is loaded automatically).
 var textareas = document.getElementsByTagName('textarea');
-init(textareas);
+init.real(textareas);
 })();
