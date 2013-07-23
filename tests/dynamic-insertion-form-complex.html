@@ -1,12 +1,14 @@
 <!DOCTYPE html>
-<title>Dynamic insertion test</title>
+<title>Complex dynamic insertion test with form</title>
 <style>
-html, body {height:100%}
+html, body, form {height:100%}
 textarea {display:block; border: 1px solid black; width:70%; height:70%; margin:auto}
 </style>
 <script>
 window.addEventListener('load', function() {
+	var form = document.createElement('form');
 	var textarea = document.createElement('textarea');
-	document.body.appendChild(textarea);
+	form.appendChild(textarea);
+	document.body.appendChild(form);
 }, false);
 </script>

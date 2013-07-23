@@ -67,6 +67,8 @@ var expiry_timespan = (((expire_after_days * 24) + expire_after_hours) * 60 + ex
 // It's better to define this separately, I guess.
 var i;
 
+var querySelector = 'textarea'; // Change to 'textarea, [contentEditable]' for contentEditable support. Not yet implemented.
+
 function getAbsolutePosition(element,direction) {
 	var ele = element, dir = direction, pos, tempEle;
 	pos = (dir==='x') ? ele.offsetLeft : ele.offsetTop;
@@ -111,7 +113,14 @@ function get_time_stamp(str) {
 var init = {
 	inserted: function(e) {
 		var potential_ta = e.target, self = init;
-		if (typeof potential_ta.tagName !== 'undefined' && potential_ta.tagName.toLowerCase() === 'textarea') {
+		
+		// If it's a node with children it'll have querySelectorAll on it.
+		if (typeof potential_ta.querySelectorAll !== 'undefined') {
+			var querySelectorResults = potential_ta.querySelectorAll(querySelector);
+			self.real(querySelectorResults);
+		}
+		// A single inserted node could just be text. But if it's an element and it h
+		else if (typeof potential_ta.tagName !== 'undefined' && potential_ta.tagName.toLowerCase() === 'textarea') {
 			// It's just one element, but we pass it as an array because of how init.real() works.
 			self.real([potential_ta]);
 		}
@@ -420,6 +429,6 @@ if (expiry_timespan > 0) {
 document.addEventListener('DOMNodeInserted', init.inserted);
 
 // Init on DOMContentLoaded (when .user.js is loaded automatically).
-var textareas = document.getElementsByTagName('textarea');
+var textareas = document.querySelectorAll(querySelector);
 init.real(textareas);
 })();
