@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name		Textarea Backup Localstorage
 // @author		Frans de Jonge (Frenzie)
-// @version		1.10
+// @version		1.11
 // @namespace		http://extendopera.org/userjs/content/textarea-backup-localstorage
 // @description		Retains text entered into textareas.
 // @include		*
@@ -10,6 +10,7 @@
 // ==/UserScript==
 // This script is based on http://userscripts.org/scripts/show/42879 which is based on http://userscripts.org/scripts/show/7671
 // Changelog
+// 1.11 July 24, 2013. Added configuration switches for the new feature.
 // 1.10 July 23, 2013. Added support for dynamically added textareas.
 // 1.03 December 27, 2012. Listen on the modern "input" event instead of "keypress". Changed keep_after_submission a little  due to problems with LibraryThing. Finally implemented the fix suggested by movax.
 // 1.02 March 10, 2010. Faux-patched a variable leak bug. Still investigating the real cause.
@@ -50,6 +51,11 @@ var em_color = /*@__Emphasizing color@string@*/'hsla(0, 100%, 50%, .4)'/*@*/;
 var expire_after_days = /*@Expire after days@int@*/0/*@*/;
 var expire_after_hours = /*@Expire after hours@int@*/2/*@*/;
 var expire_after_minutes = /*@Expire after minutes@int@*/30/*@*/;
+
+// Performance seems fine from my tests, but just in case here's a switch.
+var backup_MutationObserver = true;
+// Listening on this deprecated method can significantly affect performance on slower computers on sites that insert a lot of DOM nodes.
+var backup_DOMNodeInserted = false;
 
 /* Code */
 // GM compatibility
@@ -427,9 +433,10 @@ if (expiry_timespan > 0) {
 	}
 }
 
+// Init for dynamically inserted elements.
 var MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
 
-if (typeof MutationObserver !== 'undefined') {
+if (typeof MutationObserver !== 'undefined' && backup_MutationObserver === true) {
 	var observer = new MutationObserver(function(mutations) {  
 		mutations.forEach(function(mutation) {
 			for (var i = 0; i < mutation.addedNodes.length; i++) {
@@ -440,7 +447,7 @@ if (typeof MutationObserver !== 'undefined') {
 	
 	observer.observe(document.body, { subtree: true, childList: true });
 }
-else {
+else if (backup_DOMNodeInserted === true) {
 	// Init on DOMNodeInserted
 	document.addEventListener('DOMNodeInserted', init.inserted);
 }
