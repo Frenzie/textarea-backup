@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name		Textarea Backup Localstorage
 // @author		Frans de Jonge (Frenzie)
-// @version		1.11
+// @version		1.12
 // @namespace		http://extendopera.org/userjs/content/textarea-backup-localstorage
 // @description		Retains text entered into textareas.
 // @include		*
@@ -10,6 +10,7 @@
 // ==/UserScript==
 // This script is based on http://userscripts.org/scripts/show/42879 which is based on http://userscripts.org/scripts/show/7671
 // Changelog
+// 1.12 Trustworthy old persistent preferences support added.
 // 1.11 July 24, 2013. Added configuration switches for the new feature.
 // 1.10 July 23, 2013. Added support for dynamically added textareas.
 // 1.03 December 27, 2012. Listen on the modern "input" event instead of "keypress". Changed keep_after_submission a little  due to problems with LibraryThing. Finally implemented the fix suggested by movax.
@@ -17,45 +18,86 @@
 // 1.01 March 10, 2010. Fixed bug where localStorage values not set by this script were often accidentally deleted.
 // 1.0 March 7, 2010. Initial release.
 
+/* 
+You can put the settings in a separate file based on a template like this:
+
+window.opera.UJSTextareaBackupSettings = {
+	menu_display : true,
+}
+*/
+
 // Tell JSHint that we don't need warnings about multiline strings. It's not like e.g. localStorage even works on older browsers.
 // Don't need warnings about ommitting {}. It's just faster sometimes.
 /*jshint multistr: true, curly: false */
 
 (function () {
 'use strict';
+	
 /* Preferences */
 
-// display menu
-var menu_display = /*@Display menu@bool@*/true/*@*/;
-// backup when keypress event triggers
-var keypress_backup = /*@Backup on keypress@bool@*/true/*@*/;
-// backup when textarea loses focus
-var blur_backup = /*@Backup on blur (when textarea loses focus)@bool@*/true/*@*/;
-// backup at time interval
-var timed_backup = /*@Timed backup@bool@*/false/*@*/;
-// backup time interval, in millisecond
-var backup_interval = /*@_Backup interval (ms)@int@*/10000/*@*/;
-// keep backup even successfully submitted
-// make sure expiration is enabled 
-var keep_after_submission = /*@Keep backup after submission (causes trouble on LibraryThing if false)@bool@*/true/*@*/;
-// set true to display a confirmation window of restoration
-// when the target textarea of is not empty
-// set false to skip restoration if not empty
-// user still can manually restore using GM menu
-var restore_auto = /*@Restore automatically@bool@*/true/*@*/;
-var ask_overwrite = /*@_Ask before overwriting@bool@*/true/*@*/;
-var em_available = /*@_Emphasize backup available (only works if automatic restoring is disabled)@bool@*/true/*@*/;
-var em_color = /*@__Emphasizing color@string@*/'hsla(0, 100%, 50%, .4)'/*@*/;
-// auxiliary variable to compute expiry_timespan
-// set all 0 to disable expiration
-var expire_after_days = /*@Expire after days@int@*/0/*@*/;
-var expire_after_hours = /*@Expire after hours@int@*/2/*@*/;
-var expire_after_minutes = /*@Expire after minutes@int@*/30/*@*/;
+// Blatantly based on the MyOpera Enhancements settings system.
+var defaultScriptSettings = {
 
-// Performance seems fine from my tests, but just in case here's a switch.
-var backup_MutationObserver = true;
-// Listening on this deprecated method can significantly affect performance on slower computers on sites that insert a lot of DOM nodes.
-var backup_DOMNodeInserted = false;
+/********************************/
+/**** Begin editable section ****/
+/********************************/
+
+	//*** Toggle core functions
+	// Whether to display the menu.
+	menu_display : /*@Display menu@bool@*/true/*@*/,
+	// Backup when input event triggers.
+	input_backup : /*@Backup on keypress@bool@*/true/*@*/,
+	// Backup when textarea loses focus.
+	blur_backup : /*@Backup on blur (when textarea loses focus)@bool@*/true/*@*/,
+	// backup at time interval
+	timed_backup : /*@Timed backup@bool@*/false/*@*/,
+	// backup time interval, in millisecond
+	backup_interval : /*@_Backup interval (ms)@int@*/10000/*@*/,
+	// keep backup even successfully submitted
+	// make sure expiration is enabled 
+	keep_after_submission : /*@Keep backup after submission (causes trouble on LibraryThing if false)@bool@*/true/*@*/,
+	// set true to display a confirmation window of restoration
+	// when the target textarea of is not empty
+	// set false to skip restoration if not empty
+	// user still can manually restore using GM menu
+	restore_auto : /*@Restore automatically@bool@*/true/*@*/,
+	ask_overwrite : /*@_Ask before overwriting@bool@*/true/*@*/,
+	em_available : /*@_Emphasize backup available (only works if automatic restoring is disabled)@bool@*/true/*@*/,
+	em_color : /*@__Emphasizing color@string@*/'hsla(0, 100%, 50%, .4)'/*@*/,
+	// auxiliary variable to compute expiry_timespan
+	// set all 0 to disable expiration
+	expire_after_days : /*@Expire after days@int@*/0/*@*/,
+	expire_after_hours : /*@Expire after hours@int@*/2/*@*/,
+	expire_after_minutes : /*@Expire after minutes@int@*/30/*@*/,
+
+	// Performance seems fine from my tests, but just in case here's a switch.
+	backup_MutationObserver : /*@Backup dynamically inserted textareas using Mutation Observers. Performance is usually fine. This won't work on Opera 10.50-12.16@bool@*/true/*@*/,
+	// Listening on this deprecated method can significantly affect performance on slower computers on sites that insert a lot of DOM nodes.
+	backup_DOMNodeInserted : /*@Backup dynamically inserted textareas using the deprecated DOMNodeInserted event. This will work on Opera 10.50-12.16 but performance might suffer on slower computers and very complex websites.@bool@*/false/*@*/,
+
+/******************************/
+/**** End editable section ****/
+/******************************/
+};
+
+// Copy settings to variables for easier use later.
+var userSets = opera.UJSTextareaBackupSettings||defaultScriptSettings;
+
+var menu_display = (typeof userSets.menu_display !== 'undefined') ? userSets.menu_display : defaultScriptSettings.menu_display;
+var input_backup = (typeof userSets.input_backup !== 'undefined') ? userSets.input_backup : defaultScriptSettings.input_backup;
+var blur_backup = (typeof userSets.blur_backup !== 'undefined') ? userSets.blur_backup : defaultScriptSettings.blur_backup;
+var timed_backup = (typeof userSets.timed_backup !== 'undefined') ? userSets.timed_backup : defaultScriptSettings.timed_backup;
+var backup_interval = (typeof userSets.backup_interval !== 'undefined') ? userSets.backup_interval : defaultScriptSettings.backup_interval;
+var keep_after_submission = (typeof userSets.keep_after_submission !== 'undefined') ? userSets.keep_after_submission : defaultScriptSettings.keep_after_submission;
+var restore_auto = (typeof userSets.restore_auto !== 'undefined') ? userSets.restore_auto : defaultScriptSettings.restore_auto;
+var ask_overwrite = (typeof userSets.ask_overwrite !== 'undefined') ? userSets.ask_overwrite : defaultScriptSettings.ask_overwrite;
+var em_available = (typeof userSets.em_available !== 'undefined') ? userSets.em_available : defaultScriptSettings.em_available;
+var em_color = (typeof userSets.em_color !== 'undefined') ? userSets.em_color : defaultScriptSettings.em_color;
+var expire_after_days = (typeof userSets.expire_after_days !== 'undefined') ? userSets.expire_after_days : defaultScriptSettings.expire_after_days;
+var expire_after_hours = (typeof userSets.expire_after_hours !== 'undefined') ? userSets.expire_after_hours : defaultScriptSettings.expire_after_hours;
+var expire_after_minutes = (typeof userSets.expire_after_minutes !== 'undefined') ? userSets.expire_after_minutes : defaultScriptSettings.expire_after_minutes;
+var backup_MutationObserver = (typeof userSets.backup_MutationObserver !== 'undefined') ? userSets.backup_MutationObserver : defaultScriptSettings.backup_MutationObserver;
+var backup_DOMNodeInserted = (typeof userSets.backup_DOMNodeInserted !== 'undefined') ? userSets.backup_DOMNodeInserted : defaultScriptSettings.backup_DOMNodeInserted;
 
 /* Code */
 // GM compatibility
@@ -158,7 +200,7 @@ SaveTextArea.prototype = {
 	listen: function() {
 		var self = this;
 		// Save buffer every keystrokes.
-		if (keypress_backup)
+		if (input_backup)
 			this.ta.addEventListener('input', function() {
 				self.commit(self.ta.value);
 			}, true);
