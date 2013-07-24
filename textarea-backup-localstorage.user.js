@@ -216,23 +216,8 @@ SaveTextArea.prototype = {
 			this._stay_tuned();
 
 		if (!keep_after_submission) {
-			// Should be a method really but there'd be more code to get it to work as
-			// expected with event handlers so I won't bother.
-			var onsubmit = function() {
-				deleteValue(self.key());
-			};
-
-			var theform = this.ta.form;
 			// Delete buffer when the form has been submitted.
-			theform.addEventListener('submit', onsubmit, true);
-
-			// Keep a copy of the submit method.
-			theform.the_actual_submit_method = theform.submit;
-			// Catch direct calls to submit() which doesn't trigger the submit event.
-			theform.submit = function() {
-				onsubmit();
-				theform.the_actual_submit_method();
-			};
+			this.ta.form.addEventListener('submit', function() {deleteValue(self.key());}, true);
 		}
 	},
 	_stay_tuned: function() {
