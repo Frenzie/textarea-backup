@@ -10,7 +10,10 @@
 // ==/UserScript==
 // This script is based on http://userscripts.org/scripts/show/42879 which is based on http://userscripts.org/scripts/show/7671
 // Changelog
-// 1.12 July 25, 2013. Trustworthy old persistent preferences support added. Fixed the keep_after_submission bug, so setting it to false is safe again.
+// 1.12 July 25, 2013.
+// - Trustworthy old persistent preferences support added.
+// - Fixed the keep_after_submission bug, so setting it to false is safe again.
+// - Removed the form requirement.
 // 1.11 July 24, 2013. Added configuration switches for the new feature.
 // 1.10 July 23, 2013. Added support for dynamically added textareas.
 // 1.03 December 27, 2012. Listen on the modern "input" event instead of "keypress". Changed keep_after_submission a little  due to problems with LibraryThing. Finally implemented the fix suggested by movax.
@@ -55,6 +58,7 @@ var defaultScriptSettings = {
 	backup_interval : /*@_Backup interval (ms)@int@*/10000/*@*/,
 	// Keep backup even if successfully submitted.
 	// Make sure expiration is enabled or the backup will never be deleted.
+	// Even if set to false, this won't do anything on textareas that aren't in a form.
 	keep_after_submission : /*@Keep backup after submission@bool@*/true/*@*/,
 	
 	// Restore saved content automatically.
@@ -183,11 +187,7 @@ var init = {
 	},
 	real: function(textareas) {
 		for (var i = 0; i < textareas.length; i++) {
-			var ta = textareas[i];
-			// Occasionally a textarea might not have a form, weird.
-			if (ta.form) {
-				new SaveTextArea(ta);
-			}
+			new SaveTextArea(textareas[i]);
 		}
 	}
 };
@@ -224,7 +224,8 @@ SaveTextArea.prototype = {
 			this._stay_tuned();
 		}
 
-		if (!keep_after_submission) {
+		// keep_after_submission is only relevant if there actually is a form.
+		if (!keep_after_submission && this.ta.form) {
 			// Delete buffer when the form has been submitted.
 			this.ta.form.addEventListener('submit', function() {
 				deleteValue(self.key());
