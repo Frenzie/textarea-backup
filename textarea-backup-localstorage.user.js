@@ -10,7 +10,7 @@
 // ==/UserScript==
 // This script is based on http://userscripts.org/scripts/show/42879 which is based on http://userscripts.org/scripts/show/7671
 // Changelog
-// 1.12 Trustworthy old persistent preferences support added.
+// 1.12 July 25, 2013. Trustworthy old persistent preferences support added. Fixed the keep_after_submission bug, so setting it to false is safe again.
 // 1.11 July 24, 2013. Added configuration switches for the new feature.
 // 1.10 July 23, 2013. Added support for dynamically added textareas.
 // 1.03 December 27, 2012. Listen on the modern "input" event instead of "keypress". Changed keep_after_submission a little  due to problems with LibraryThing. Finally implemented the fix suggested by movax.
@@ -42,7 +42,7 @@ var defaultScriptSettings = {
 /**** Begin editable section ****/
 /********************************/
 
-	//*** Toggle core functions
+	//*** Toggle core functions.
 	// Whether to display the menu.
 	menu_display : /*@Display menu@bool@*/true/*@*/,
 	// Backup when input event triggers.
@@ -53,26 +53,32 @@ var defaultScriptSettings = {
 	timed_backup : /*@Timed backup@bool@*/false/*@*/,
 	// backup time interval, in millisecond
 	backup_interval : /*@_Backup interval (ms)@int@*/10000/*@*/,
-	// keep backup even successfully submitted
-	// make sure expiration is enabled 
-	keep_after_submission : /*@Keep backup after submission (causes trouble on LibraryThing if false)@bool@*/true/*@*/,
-	// set true to display a confirmation window of restoration
-	// when the target textarea of is not empty
-	// set false to skip restoration if not empty
-	// user still can manually restore using GM menu
+	// Keep backup even if successfully submitted.
+	// Make sure expiration is enabled or the backup will never be deleted.
+	keep_after_submission : /*@Keep backup after submission@bool@*/true/*@*/,
+	
+	// Restore saved content automatically.
 	restore_auto : /*@Restore automatically@bool@*/true/*@*/,
+	// Ask for confirmation before automatically restoring when the target textarea of is not empty.
+	// You can still manually restore using the menu if set to false.
 	ask_overwrite : /*@_Ask before overwriting@bool@*/true/*@*/,
+	
+	//*** Emphasize the availability of a backup.
+	// Emphasize the fact that a backup available in the menu handle. This only works if restore_auto is set to false.
 	em_available : /*@_Emphasize backup available (only works if automatic restoring is disabled)@bool@*/true/*@*/,
+	// The color with which to emphasize. The default is a shade of red.
 	em_color : /*@__Emphasizing color@string@*/'hsla(0, 100%, 50%, .4)'/*@*/,
-	// auxiliary variable to compute expiry_timespan
-	// set all 0 to disable expiration
-	expire_after_days : /*@Expire after days@int@*/0/*@*/,
-	expire_after_hours : /*@Expire after hours@int@*/2/*@*/,
+	
+	//*** Auxiliary variables to compute expiry_timespan.
+	// Set all 0 to disable expiration.
+	expire_after_days : /*@Expire after days@int@*/1/*@*/,
+	expire_after_hours : /*@Expire after hours@int@*/12/*@*/,
 	expire_after_minutes : /*@Expire after minutes@int@*/30/*@*/,
-
-	// Performance seems fine from my tests, but just in case here's a switch.
-	backup_MutationObserver : /*@Backup dynamically inserted textareas using Mutation Observers. Performance is usually fine. This won't work on Opera 10.50-12.16@bool@*/true/*@*/,
-	// Listening on this deprecated method can significantly affect performance on slower computers on sites that insert a lot of DOM nodes.
+	
+	//*** Toggle backup on dynamically inserted textareas.
+	// Backup dynamically inserted textareas using Mutation Observers. Performance is usually fine. This won't do anything on Opera 10.50-12.16.
+	backup_MutationObserver : /*@Backup dynamically inserted textareas using Mutation Observers. Performance is usually fine. This won't do anything on Opera 10.50-12.16@bool@*/true/*@*/,
+	// Backup dynamically inserted textareas using the deprecated DOMNodeInserted event. This will work on Opera 10.50-12.16 but performance might suffer on slower computers and very complex websites.
 	backup_DOMNodeInserted : /*@Backup dynamically inserted textareas using the deprecated DOMNodeInserted event. This will work on Opera 10.50-12.16 but performance might suffer on slower computers and very complex websites.@bool@*/false/*@*/,
 
 /******************************/
@@ -81,7 +87,7 @@ var defaultScriptSettings = {
 };
 
 // Copy settings to variables for easier use later.
-var userSets = opera.UJSTextareaBackupSettings||defaultScriptSettings;
+var userSets = (typeof opera.UJSTextareaBackupSettings !== 'undefined') ? opera.UJSTextareaBackupSettings : defaultScriptSettings;
 
 var menu_display = (typeof userSets.menu_display !== 'undefined') ? userSets.menu_display : defaultScriptSettings.menu_display;
 var input_backup = (typeof userSets.input_backup !== 'undefined') ? userSets.input_backup : defaultScriptSettings.input_backup;
@@ -199,25 +205,30 @@ function SaveTextArea(txta) {
 SaveTextArea.prototype = {
 	listen: function() {
 		var self = this;
-		// Save buffer every keystrokes.
-		if (input_backup)
+		// Save buffer every keystroke.
+		if (input_backup) {
 			this.ta.addEventListener('input', function() {
 				self.commit(self.ta.value);
 			}, true);
+		}
 
 		// Save buffer when the textarea loses focus.
-		if (blur_backup)
+		if (blur_backup) {
 			this.ta.addEventListener('blur', function() {
 				self.commit();
 			}, true);
+		}
 
 		// Save buffer every second.
-		if (timed_backup)
+		if (timed_backup) {
 			this._stay_tuned();
+		}
 
 		if (!keep_after_submission) {
 			// Delete buffer when the form has been submitted.
-			this.ta.form.addEventListener('submit', function() {deleteValue(self.key());}, true);
+			this.ta.form.addEventListener('submit', function() {
+				deleteValue(self.key());
+			}, true);
 		}
 	},
 	_stay_tuned: function() {
@@ -323,7 +334,7 @@ SaveTextArea.prototype = {
 			'Restore previous backup for ' + this.ref(),
 			function() { self.ta.value = self.previous_backup; }
 		];
-		menuFunctions[menuFunctions.length] = new Array(
+		menuFunctions[menuFunctions.length] = [
 			'Delete previous backup for ' + this.ref(),
 			function() {
 				if (confirm('Delete previous backup for ' + self.ref() + '?')) {
@@ -331,14 +342,15 @@ SaveTextArea.prototype = {
 					this.parentNode.removeChild(this);
 				}
 			}
-		);
-		menuFunctions[menuFunctions.length] = new Array(
+		];
+		menuFunctions[menuFunctions.length] = [
 			'Clear ' + this.ref(),
 			function() {
-				if(confirm('Clear ' + self.ref() + '?'))
+				if(confirm('Clear ' + self.ref() + '?')) {
 					self.ta.value = '';
+				}
 			}
-		);
+		];
 		
 		for (var i in menuFunctions) {
 			// Checking if there are no outside "menuFunctions" leaking into the script. Thanks to movax for the fix.
