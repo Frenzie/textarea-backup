@@ -32,8 +32,7 @@ window.opera.UJSTextareaBackupSettings = {
 */
 
 // Tell JSHint that we don't need warnings about multiline strings. It's not like e.g. localStorage even works on older browsers.
-// Don't need warnings about ommitting {}. It's just faster sometimes.
-/*jshint multistr: true, curly: false */
+/*jshint multistr: true */
 
 (function () {
 'use strict';
@@ -396,30 +395,29 @@ SaveTextArea.prototype = {
 		var buff = remove_time_stamp(getValue(this.key()));
 		
 		// Only restore buffer if previously saved (i.e form not submitted).
-		if(!is_significant(buff))
+		if(!is_significant(buff)) {
 			return;
-		
-		//myLocalStorage['tab_temp'] = this.ta.textContent;
-		//opera.postError(typeof buff);
-		//opera.postError(typeof myLocalStorage['tab_temp']);
-		//opera.postError(buff == myLocalStorage['tab_temp']);
+		}
 		
 		// Check with user before overwriting existing content with backup.
-		if (buff !== this.ta.textContent && is_significant(this.ta.textContent) && ask_overwrite) {
+		if (buff !== this.getTAValue() && is_significant(this.getTAValue()) && ask_overwrite) {
 			this._confirm_restore(buff);
 		}
 		else {
-			if (restore_auto)
+			if (restore_auto) {
 				this.setTAValue(buff);
-			else if (em_available)
+			}
+			else if (em_available) {
 				em = true;
+			}
 		}
 
 		//this.previous_backup = this.ta.value;
 		this.previous_backup = buff;
 
-		if (menu_display)
+		if (menu_display) {
 			this.menu(em);
+		}
 	},
 	_confirm_restore: function(buff) {
 		var to_restore = remove_time_stamp(getValue(this.key()));
@@ -441,8 +439,9 @@ SaveTextArea.prototype = {
 		if (type.isTextArea(this.ta)) {
 			this.ta.value = this.ta.textContent;
 		}
-		if (window.confirm(msg))
+		if (window.confirm(msg)) {
 			this.setTAValue(buff);
+		}
 
 		this.confirming = false;
 		this.ta.style.border = this.old_border;
@@ -454,8 +453,10 @@ SaveTextArea.prototype = {
 			if(self.confirming) {
 				self.ta.style.border = ( toggle ? '3px red solid' : ta_border );
 				self._highlight_textarea(ta_border, toggle);
-			} else
+			}
+			else {
 				self.ta.style.border = this.old_border;
+			}
 		}, 1000, border, !toggle);
 
 		return this.ta.style.border;
@@ -466,8 +467,9 @@ SaveTextArea.prototype = {
 		// Only save if:
 		// a) There's significant text in the <textarea>.
 		// b) The text that was there when the page loaded has changed.
-		if(is_significant(this.committed) && this.initial_txt !== this.committed)
+		if (is_significant(this.committed) && this.initial_txt !== this.committed) {
 			setValue( this.key(), this.committed );
+		}
 	},
 	// Rough'n'ready method which should be nicer.
 	key: function()	{
@@ -493,7 +495,6 @@ SaveTextArea.prototype = {
 				// We could probably do with ta.removeChild(ta.lastChild) but we don't want any nasty surprises.
 				var menuElements = ta.querySelectorAll('.textarea_backup_menu');
 				for (var i=0; i<menuElements.length; i++) {
-					console.log(menuElements[i])
 					ta.removeChild(menuElements[i]);
 				}
 			}
