@@ -10,7 +10,7 @@
 // ==/UserScript==
 // This script is based on http://userscripts.org/scripts/show/42879 which is based on http://userscripts.org/scripts/show/7671
 // Changelog
-// 1.12 July 25, 2013.
+// 1.20 July 25, 2013.
 // - Trustworthy old persistent preferences support added.
 // - Fixed the keep_after_submission bug, so setting it to false is safe again.
 // - Removed the form requirement.
@@ -123,7 +123,7 @@ var expiry_timespan = (((expire_after_days * 24) + expire_after_hours) * 60 + ex
 // It's better to define this separately, I guess.
 var i;
 
-var querySelector = 'textarea, [contentEditable]'; // Change to 'textarea, [contentEditable]' for contentEditable support. Not yet implemented.
+var querySelector = 'textarea, [contentEditable]';
 
 function getAbsolutePosition(element,direction) {
 	var ele = element, dir = direction, pos, tempEle;
