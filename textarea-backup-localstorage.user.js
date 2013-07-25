@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name		Textarea Backup Localstorage
 // @author		Frans de Jonge (Frenzie)
-// @version		1.21
+// @version		1.22
 // @namespace		http://extendopera.org/userjs/content/textarea-backup-localstorage
 // @description		Retains text entered into textareas and contentEditable elements.
 // @include		*
@@ -10,6 +10,7 @@
 // ==/UserScript==
 // This script is based on http://userscripts.org/scripts/show/42879 which is based on http://userscripts.org/scripts/show/7671
 // Changelog
+// 1.22
 // 1.21 July 25, 2013.
 // - Fixed a bug that occurred when BODY was contentEditable, as is typical in iframes.
 // - Properly compare initial value of contentEditable element to backed up value so you'll only get prompted to overwrite when relevant.
@@ -35,6 +36,9 @@ window.opera.UJSTextareaBackupSettings = {
 
 // Tell JSHint that we don't need warnings about multiline strings. It's not like e.g. localStorage even works on older browsers.
 /*jshint multistr: true */
+// Confirm is not used for development in this script, and besides I want errors for lingering console.log() and such.
+// Anyway, defining these variables for JSHint so we won't get any errors, which looks more pleasing to the eye.
+/* global confirm, opera, unsafeWindow, window:true */
 
 (function () {
 'use strict';
