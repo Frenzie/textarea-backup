@@ -14,6 +14,7 @@
 // - Trustworthy old persistent preferences support added.
 // - Fixed the keep_after_submission bug, so setting it to false is safe again.
 // - Removed the form requirement.
+// - Support contentEditable.
 // 1.11 July 24, 2013. Added configuration switches for the new feature.
 // 1.10 July 23, 2013. Added support for dynamically added textareas.
 // 1.03 December 27, 2012. Listen on the modern "input" event instead of "keypress". Changed keep_after_submission a little  due to problems with LibraryThing. Finally implemented the fix suggested by movax.
@@ -122,7 +123,7 @@ var expiry_timespan = (((expire_after_days * 24) + expire_after_hours) * 60 + ex
 // It's better to define this separately, I guess.
 var i;
 
-var querySelector = 'textarea'; // Change to 'textarea, [contentEditable]' for contentEditable support. Not yet implemented.
+var querySelector = 'textarea, [contentEditable]'; // Change to 'textarea, [contentEditable]' for contentEditable support. Not yet implemented.
 
 function getAbsolutePosition(element,direction) {
 	var ele = element, dir = direction, pos, tempEle;
@@ -180,7 +181,7 @@ var init = {
 			self.real(querySelectorResults);
 		}
 		// A single inserted node could just be text. But if it's actually an element and a textarea, push it through.
-		else if (typeof potential_ta.tagName !== 'undefined' && potential_ta.tagName.toLowerCase() === 'textarea') {
+		else if ( type.isElement(potential_ta) && (type.isTextArea(potential_ta) || type.isContentEditable(potential_ta)) ) {
 			// It's just one element, but we pass it as an array because of how init.real() works.
 			self.real([potential_ta]);
 		}
@@ -192,11 +193,23 @@ var init = {
 	}
 };
 
+var type = {
+	isContentEditable: function(ta) {
+		return ta.contentEditable === 'true';
+	},
+	isTextArea: function(ta) {
+		return ta.tagName.toLowerCase() === 'textarea';
+	},
+	isElement: function(ta) {
+		return typeof ta.tagName !== 'undefined';
+	}
+};
+
 function SaveTextArea(txta) {
 	this.ta = (typeof txta === 'string' ?
 		document.getElementById(txta) : txta);
 
-	this.initial_txt = this.ta.textContent;
+	this.initial_txt = (type.isTextArea(this.ta)) ? this.ta.textContent : this.ta.innerHTML;
 	this.committed = '';
 
 	this.listen();
@@ -208,8 +221,15 @@ SaveTextArea.prototype = {
 		// Save buffer every keystroke.
 		if (input_backup) {
 			this.ta.addEventListener('input', function() {
-				self.commit(self.ta.value);
+				self.commit(self.getTAValue());
 			}, true);
+			// Unfortunately it looks like Opera 10.50-12.16 does not support the input event on contentEditable. Since the blur event annoyingly doesn't always fire, we need a workaround.
+			// If window.opera exists in Opera 15 we can always check something like navigator.userAgent.substring(navigator.userAgent.indexOf('Version')+8)<15)
+			if (window.opera) {
+				this.ta.addEventListener('keypress', function() {
+					self.commit(self.getTAValue());
+				}, true);
+			}
 		}
 
 		// Save buffer when the textarea loses focus.
@@ -333,7 +353,7 @@ SaveTextArea.prototype = {
 		var menuFunctions = [];
 		menuFunctions[menuFunctions.length] = [
 			'Restore previous backup for ' + this.ref(),
-			function() { self.ta.value = self.previous_backup; }
+			function() { self.setTAValue(self.previous_backup); }
 		];
 		menuFunctions[menuFunctions.length] = [
 			'Delete previous backup for ' + this.ref(),
@@ -348,7 +368,7 @@ SaveTextArea.prototype = {
 			'Clear ' + this.ref(),
 			function() {
 				if(confirm('Clear ' + self.ref() + '?')) {
-					self.ta.value = '';
+					self.setTAValue('');
 				}
 			}
 		];
@@ -389,7 +409,7 @@ SaveTextArea.prototype = {
 		}
 		else {
 			if (restore_auto)
-				this.ta.value = buff;
+				this.setTAValue(buff);
 			else if (em_available)
 				em = true;
 		}
@@ -417,9 +437,11 @@ SaveTextArea.prototype = {
 
 		// Let the user see the existing content as Firefox will sometimes
 		// maintain the old value.
-		this.ta.value = this.ta.textContent;
+		if (type.isTextArea(this.ta)) {
+			this.ta.value = this.ta.textContent;
+		}
 		if (window.confirm(msg))
-			this.ta.value = buff;
+			this.setTAValue(buff);
 
 		this.confirming = false;
 		this.ta.style.border = this.old_border;
@@ -438,7 +460,7 @@ SaveTextArea.prototype = {
 		return this.ta.style.border;
 	},
 	commit: function() {
-		this.committed = append_time_stamp(this.ta.value);
+		this.committed = append_time_stamp(this.getTAValue());
 		
 		// Only save if:
 		// a) There's significant text in the <textarea>.
@@ -455,6 +477,26 @@ SaveTextArea.prototype = {
 	// Attempt to return the most appropriate textarea reference.
 	ref: function() {
 		return this.ta.id || this.ta.name || '';
+	},
+	getTAValue: function() {
+		var ta = this.ta;
+		if (type.isTextArea(ta)) {
+			return ta.value;
+		}
+		// If it's not a textarea, it must be a contentEditable element.
+		else {
+			return ta.innerHTML;
+		}
+	},
+	setTAValue: function(newValue) {
+		var ta = this.ta;
+		if (type.isTextArea(ta)) {
+			ta.value = newValue;
+		}
+		// If it's not a textarea, it must be a contentEditable element.
+		else {
+			ta.innerHTML = newValue;
+		}
 	}
 };
 
