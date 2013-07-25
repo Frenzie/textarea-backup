@@ -10,6 +10,7 @@
 // ==/UserScript==
 // This script is based on http://userscripts.org/scripts/show/42879 which is based on http://userscripts.org/scripts/show/7671
 // Changelog
+// 1.21 July 25, 2013. Fixed a bug that occurred when BODY was contentEditable, as is typical in iframes.
 // 1.20 July 25, 2013.
 // - Trustworthy old persistent preferences support added.
 // - Fixed the keep_after_submission bug, so setting it to false is safe again.
@@ -485,6 +486,17 @@ SaveTextArea.prototype = {
 		}
 		// If it's not a textarea, it must be a contentEditable element.
 		else {
+			// If the whole body is contentEditable in an iframe, remove the menu.
+			if (ta === document.body) {
+				// Clone the whole thing so the real menu won't be affected.
+				ta = ta.cloneNode(true);
+				// We could probably do with ta.removeChild(ta.lastChild) but we don't want any nasty surprises.
+				var menuElements = ta.querySelectorAll('.textarea_backup_menu');
+				for (var i=0; i<menuElements.length; i++) {
+					console.log(menuElements[i])
+					ta.removeChild(menuElements[i]);
+				}
+			}
 			return ta.innerHTML;
 		}
 	},
