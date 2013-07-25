@@ -10,7 +10,9 @@
 // ==/UserScript==
 // This script is based on http://userscripts.org/scripts/show/42879 which is based on http://userscripts.org/scripts/show/7671
 // Changelog
-// 1.21 July 25, 2013. Fixed a bug that occurred when BODY was contentEditable, as is typical in iframes.
+// 1.21 July 25, 2013.
+// - Fixed a bug that occurred when BODY was contentEditable, as is typical in iframes.
+// - Properly compare initial value of contentEditable element to backed up value so you'll only get prompted to overwrite when relevant.
 // 1.20 July 25, 2013.
 // - Trustworthy old persistent preferences support added.
 // - Fixed the keep_after_submission bug, so setting it to false is safe again.
