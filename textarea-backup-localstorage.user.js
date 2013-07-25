@@ -3,7 +3,7 @@
 // @author		Frans de Jonge (Frenzie)
 // @version		1.21
 // @namespace		http://extendopera.org/userjs/content/textarea-backup-localstorage
-// @description		Retains text entered into textareas.
+// @description		Retains text entered into textareas and contentEditable elements.
 // @include		*
 // @exclude		http://mail.google.com/*
 // @exclude		https://mail.google.com/*
